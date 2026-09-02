@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="workspace-meta/render_human_docs.py">
+<title>chatgpt-mcp</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --text: #1d2433;
+  --muted: #667085;
+  --border: #d9e0ea;
+  --accent: #315efb;
+  --accent-soft: #eef2ff;
+  --code-bg: #f1f4f9;
+  --quote: #f7f9fc;
+  --shadow: 0 8px 24px rgba(20, 32, 60, 0.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101318;
+    --panel: #181d25;
+    --text: #e8ecf3;
+    --muted: #a3adbd;
+    --border: #303846;
+    --accent: #8ea8ff;
+    --accent-soft: #202a4a;
+    --code-bg: #11161e;
+    --quote: #141a22;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+  line-height: 1.75;
+}
+main {
+  width: min(1100px, calc(100% - 32px));
+  margin: 28px auto 64px;
+}
+.page {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: clamp(22px, 4vw, 48px);
+  box-shadow: var(--shadow);
+}
+.source-note {
+  margin: 0 0 28px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+h1, h2, h3, h4, h5, h6 { line-height: 1.35; scroll-margin-top: 16px; }
+h1 { margin-top: 0; font-size: clamp(1.8rem, 4vw, 2.55rem); }
+h2 { margin-top: 2.2em; padding-bottom: .35em; border-bottom: 1px solid var(--border); font-size: 1.45rem; }
+h3 { margin-top: 1.7em; font-size: 1.18rem; }
+a { color: var(--accent); text-underline-offset: 2px; }
+code {
+  padding: .12em .38em;
+  border-radius: 5px;
+  background: var(--code-bg);
+  font-family: Consolas, "Cascadia Code", monospace;
+  font-size: .92em;
+}
+pre {
+  overflow-x: auto;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+pre code { padding: 0; background: transparent; }
+blockquote {
+  margin: 1.2em 0;
+  padding: .45em 1.1em;
+  border-left: 4px solid var(--accent);
+  background: var(--quote);
+  color: var(--muted);
+}
+ul, ol { padding-left: 1.55em; }
+li { margin: .26em 0; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  margin: 1.2em 0;
+}
+th, td { padding: 10px 12px; border: 1px solid var(--border); vertical-align: top; }
+th { background: var(--accent-soft); text-align: left; }
+input[type="checkbox"] { margin-right: .45em; }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+.card {
+  display: block;
+  min-height: 132px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: inherit;
+  text-decoration: none;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.card strong { display: block; margin-bottom: 8px; font-size: 1.08rem; }
+.card span { color: var(--muted); font-size: .92rem; }
+.small { color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main><article class="page">
+<div class="source-note">人間向けの自動生成HTMLです。編集正本: <code>README.md</code> ／ このHTMLは直接編集しないでください。</div>
+<h1>chatgpt-mcp</h1>
+<p>MCP server that gives ChatGPT&#x27;s web UI the same <code>ask(prompt) → response</code> interface as CLI-based AI tools (Codex, Gemini CLI, etc.). Built with Playwright for browser automation.</p>
+<h2>Why this exists</h2>
+<p>This is part of a multi-model orchestration setup where Claude Code acts as the top-level AI orchestrator, dispatching tasks to the best model for the job:</p>
+<ul>
+<li><strong>Codex</strong> (OpenAI) — available via CLI (<code>codex mcp-server</code>)
+</li>
+<li><strong>Gemini</strong> — available via CLI (<code>gemini-mcp-tool</code>)
+</li>
+<li><strong>Claude</strong> — the orchestrator itself
+</li>
+<li><strong>GPT-5.2 Pro</strong> — only available through ChatGPT&#x27;s web UI (not API on subscription plans)
+</li>
+</ul>
+<p>GPT-5.2 Pro is the most powerful model available for many tasks but lacks a CLI/API interface. This MCP server bridges that gap by automating the ChatGPT web UI via Playwright, giving it the same ergonomic blocking <code>ask → response</code> pattern as the other models.</p>
+<h3>Use cases</h3>
+<ul>
+<li>Dispatching complex reasoning tasks to GPT-5.2 Pro from Claude Code
+</li>
+<li>AI round-table discussions where Claude Code facilitates debate between all models
+</li>
+<li>File analysis by uploading documents to ChatGPT
+</li>
+<li>Project-scoped conversations using ChatGPT&#x27;s Projects feature
+</li>
+</ul>
+<h2>Architecture</h2>
+<pre><code>Claude Code (orchestrator)
+    ├── Codex CLI    → mcp-server (stdio)
+    ├── Gemini CLI   → mcp-tool (stdio)
+    ├── Claude       → native
+    └── ChatGPT      → chatgpt-mcp (this project)
+                         └── Playwright → Chromium → chatgpt.com</code></pre>
+<p>The server launches a persistent Chromium browser on first use, maintains login cookies across sessions, and uses multi-strategy DOM scraping to extract responses reliably despite ChatGPT&#x27;s frequently-changing UI.</p>
+<h2>Tools</h2>
+<table><thead><tr>
+<th>Tool</th>
+<th>Description</th>
+</tr></thead><tbody>
+<tr>
+<td><code>chatgpt_ask</code></td>
+<td>Send prompt, optionally switch model/project, poll until complete, return response</td>
+</tr>
+<tr>
+<td><code>chatgpt_reply</code></td>
+<td>Follow-up in current conversation (no model/project switch)</td>
+</tr>
+<tr>
+<td><code>chatgpt_upload</code></td>
+<td>Upload files + optional prompt, poll for response</td>
+</tr>
+<tr>
+<td><code>chatgpt_select_project</code></td>
+<td>Navigate to a ChatGPT Project by name</td>
+</tr>
+<tr>
+<td><code>chatgpt_new_chat</code></td>
+<td>Start fresh conversation (stays in project if set)</td>
+</tr>
+</tbody></table>
+<p>All tools are <strong>blocking</strong> — they return only when the response is ready (or timeout). This matches the ergonomics of Codex and Gemini MCPs.</p>
+<h2>Setup</h2>
+<pre><code class="language-bash"># Install dependencies
+npm install
+
+# Install Playwright&#x27;s Chromium
+npx playwright install chromium
+
+# Build
+npm run build</code></pre>
+<h3>Claude Code config</h3>
+<p>Add to <code>~/.claude.json</code> under <code>mcpServers</code>:</p>
+<pre><code class="language-json">&quot;chatgpt&quot;: {
+  &quot;type&quot;: &quot;stdio&quot;,
+  &quot;command&quot;: &quot;node&quot;,
+  &quot;args&quot;: [&quot;/path/to/chatgpt-mcp/dist/index.js&quot;]
+}</code></pre>
+<h3>First use</h3>
+<p>On first <code>chatgpt_ask</code> call, a Chromium window opens at chatgpt.com. Log in manually once — cookies are persisted to <code>~/.chatgpt-mcp/user-data/state.json</code> for future sessions.</p>
+<h2>Key design decisions</h2>
+<table><thead><tr>
+<th>Decision</th>
+<th>Choice</th>
+<th>Why</th>
+</tr></thead><tbody>
+<tr>
+<td>Browser engine</td>
+<td>Playwright (Chromium)</td>
+<td>Full DOM access, self-healing selectors, file upload support</td>
+</tr>
+<tr>
+<td>Tool count</td>
+<td>5</td>
+<td>Orchestrator only needs ask/reply/upload/project/newchat</td>
+</tr>
+<tr>
+<td>Session start</td>
+<td>Auto on first call</td>
+<td>No separate start_session step needed</td>
+</tr>
+<tr>
+<td>Blocking by default</td>
+<td>Yes</td>
+<td>Matches Codex/Gemini ergonomics</td>
+</tr>
+<tr>
+<td>Default timeout</td>
+<td>60 minutes</td>
+<td>GPT-5.2 Pro can think 20+ minutes</td>
+</tr>
+<tr>
+<td>Completion detection</td>
+<td>Multi-indicator + content stability</td>
+<td>Most robust: checks stop button, streaming flag, regen/copy buttons, send-enabled state, and 3 consecutive stable content checks</td>
+</tr>
+<tr>
+<td>Response extraction</td>
+<td>5-strategy cascade</td>
+<td>Handles ChatGPT UI changes: markdown containers → assistant role → articles → conversation turns → fallback</td>
+</tr>
+<tr>
+<td>Polling</td>
+<td>Fibonacci backoff</td>
+<td>2s, 3s, 5s, 8s, 13s, 21s, 30s+ — responsive for quick answers, efficient for long ones</td>
+</tr>
+</tbody></table>
+<h2>Lineage</h2>
+<p>Merges the best of two prototypes:</p>
+<ul>
+<li><strong>gpt-bridge</strong> — battle-tested response extraction, model selection, project management via Playwright
+</li>
+<li><strong>chatgpt-desktop-mcp</strong> — blocking <code>ask</code> tool with Fibonacci backoff (was AppleScript-based, fragile)
+</li>
+</ul>
+</article></main>
+</body>
+</html>
