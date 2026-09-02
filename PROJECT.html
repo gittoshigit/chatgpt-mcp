@@ -151,13 +151,19 @@ input[type="checkbox"] { margin-right: .45em; }
 </ul>
 <h2>利用方法</h2>
 <ol>
-<li><code>npm install</code>
+<li><code>npm ci</code>
 </li>
 <li><code>npx playwright install chromium</code>
 </li>
 <li><code>npm run build</code>
 </li>
-<li><code>~/.claude.json</code> の <code>mcpServers.chatgpt</code> に登録して利用
+<li>各AI（Codex, Claude Code, Antigravity）のMCP設定に登録して利用。
+<ul>
+<li>Chromiumプロファイル分離先: <code>C:\Users\&lt;User&gt;\.chatgpt-mcp-homes\&lt;ai&gt;</code>
+</li>
+<li>提供Tool: <code>chatgpt_ask</code>, <code>chatgpt_reply</code>, <code>chatgpt_upload</code>, <code>chatgpt_select_project</code>, <code>chatgpt_new_chat</code>
+</li>
+</ul>
 </li>
 </ol>
 </article></main>

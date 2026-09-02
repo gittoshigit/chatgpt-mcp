@@ -12,7 +12,10 @@
 - `src/utils/backoff.ts`: Fibonacci バックオフユーティリティ
 
 ## 利用方法
-1. `npm install`
+1. `npm ci`
 2. `npx playwright install chromium`
 3. `npm run build`
-4. `~/.claude.json` の `mcpServers.chatgpt` に登録して利用
+4. 各AI（Codex, Claude Code, Antigravity）のMCP設定に登録して利用。
+   - Chromiumプロファイル分離先: `C:\Users\<User>\.chatgpt-mcp-homes\<ai>`
+   - 提供Tool: `chatgpt_ask`, `chatgpt_reply`, `chatgpt_upload`, `chatgpt_select_project`, `chatgpt_new_chat`
+
