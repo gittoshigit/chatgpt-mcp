@@ -139,8 +139,26 @@ export async function elementExists(selectors: readonly string[]): Promise<boole
   return false;
 }
 
+export interface FillableElement {
+  click(): Promise<void>;
+  fill(value: string): Promise<void>;
+}
+
 /**
- * Type text into an element found by selectors
+ * Fill text into a composer element atomically.
+ *
+ * Important: do not emulate typing character-by-character here. Playwright
+ * interprets "\n" / "\r" as Enter key presses when using keyboard-style
+ * typing, which can submit a ChatGPT prompt at each newline. fill() preserves
+ * multiline text as content and is also dramatically faster for long prompts.
+ */
+export async function fillTextElement(element: FillableElement, text: string): Promise<void> {
+  await element.click();
+  await element.fill(text);
+}
+
+/**
+ * Fill text into an element found by selectors.
  */
 export async function typeText(selectors: readonly string[], text: string): Promise<boolean> {
   const element = await findElement(selectors);
@@ -148,13 +166,7 @@ export async function typeText(selectors: readonly string[], text: string): Prom
     return false;
   }
 
-  await element.click();
-  await element.fill('');
-
-  for (const char of text) {
-    await element.type(char, { delay: CONFIG.typingDelay });
-  }
-
+  await fillTextElement(element, text);
   return true;
 }
 

@@ -34,6 +34,51 @@ let sessionState: SessionState = {
 
 let sessionInitialized = false;
 
+const RESPONSE_UI_PHRASES = [
+  'ChatGPT said:',
+  'ChatGPT said',
+  'Pro thinking',
+  'Answer now',
+  'Extended thinking',
+  'Show thinking',
+  'Hide thinking',
+  'Reasoning',
+  'Thinking...',
+  'Thinking\u2026',
+  '\u2022 ',
+];
+
+/**
+ * Remove ChatGPT UI chrome without flattening response structure.
+ * Newlines and indentation are meaningful for Markdown/code, so keep them.
+ */
+export function cleanResponseText(text: string): string {
+  let cleaned = text.replace(/\r\n?/g, '\n');
+
+  for (const phrase of RESPONSE_UI_PHRASES) {
+    while (cleaned.includes(phrase)) {
+      cleaned = cleaned.replace(phrase, '');
+    }
+  }
+
+  // Remove "Thinking" only as a standalone word at the start.
+  cleaned = cleaned.replace(/^Thinking[^\S\r\n]*/i, '');
+  cleaned = cleaned.replace(/Pro[^\S\r\n]+thinking[^\S\r\n]*\u2022?[^\S\r\n]*/gi, '');
+
+  // Remove a leading timing indicator such as "15 seconds".
+  cleaned = cleaned.replace(/^\d+[^\S\r\n]*(seconds?|secs?)[^\S\r\n]*/i, '');
+
+  // Keep Markdown/code formatting while normalizing line endings and trailing spaces.
+  cleaned = cleaned
+    .split('\n')
+    .map(line => line.replace(/[ \t]+$/g, ''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return cleaned;
+}
+
 // ============================================
 // Session management
 // ============================================
@@ -117,51 +162,19 @@ async function getLatestResponseText(): Promise<string | null> {
   try {
     const page = await getPage();
 
-    const text = await page.evaluate(() => {
-      // UI chrome phrases that appear in turn elements but aren't part of the response
-      const phrasesToRemove = [
-        'ChatGPT said:',
-        'ChatGPT said',
-        'Pro thinking',
-        'Answer now',
-        'Extended thinking',
-        'Show thinking',
-        'Hide thinking',
-        'Reasoning',
-        'Thinking...',
-        'Thinking\u2026',
-        '\u2022 ',
-      ];
-
-      const cleanText = (text: string): string => {
-        let cleaned = text;
-        for (const phrase of phrasesToRemove) {
-          while (cleaned.includes(phrase)) {
-            cleaned = cleaned.replace(phrase, '');
-          }
-        }
-        // Remove "Thinking" only as a standalone word at the start
-        cleaned = cleaned.replace(/^Thinking\s*/i, '');
-        cleaned = cleaned.replace(/Pro\s+thinking\s*\u2022?\s*/gi, '');
-        // Remove timing indicators like "15 seconds" but be careful not to strip legitimate numbers
-        cleaned = cleaned.replace(/^\d+\s*(seconds?|secs?)\s*/i, '');
-        cleaned = cleaned.replace(/\s+/g, ' ').trim();
-        return cleaned;
-      };
+    const candidates = await page.evaluate(() => {
+      const texts: string[] = [];
 
       // Get all conversation turns
       const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]');
-      if (turns.length < 2) return null;
+      if (turns.length < 2) return texts;
 
       const lastTurn = turns[turns.length - 1] as HTMLElement;
 
       // Strategy 1: Use innerText of the turn element (respects visibility, skips hidden elements)
       // This is the most reliable because it gets exactly what the user sees
       const innerText = lastTurn.innerText?.trim();
-      if (innerText) {
-        const cleaned = cleanText(innerText);
-        if (cleaned.length > 0) return cleaned;
-      }
+      if (innerText) texts.push(innerText);
 
       // Strategy 2: Clone, strip chrome elements, get textContent
       const clone = lastTurn.cloneNode(true) as Element;
@@ -176,30 +189,30 @@ async function getLatestResponseText(): Promise<string | null> {
         clone.querySelectorAll(sel).forEach(e => e.remove());
       }
       const stripped = clone.textContent?.trim();
-      if (stripped) {
-        const cleaned = cleanText(stripped);
-        if (cleaned.length > 0) return cleaned;
-      }
+      if (stripped) texts.push(stripped);
 
       // Strategy 3: Look for markdown/prose inside the turn
       const markdown = lastTurn.querySelector('.markdown, .prose, [class*="markdown"]');
-      if (markdown) {
-        const mdText = markdown.textContent?.trim();
-        if (mdText) return cleanText(mdText);
-      }
+      const mdText = markdown?.textContent?.trim();
+      if (mdText) texts.push(mdText);
 
       // Strategy 4: data-message-author-role="assistant" anywhere on page
       const assistantMsgs = document.querySelectorAll('[data-message-author-role="assistant"]');
       if (assistantMsgs.length > 0) {
         const lastMsg = assistantMsgs[assistantMsgs.length - 1] as HTMLElement;
         const msgText = lastMsg.innerText?.trim();
-        if (msgText) return cleanText(msgText);
+        if (msgText) texts.push(msgText);
       }
 
-      return null;
+      return texts;
     });
 
-    return text;
+    for (const candidate of candidates) {
+      const cleaned = cleanResponseText(candidate);
+      if (cleaned.length > 0) return cleaned;
+    }
+
+    return null;
   } catch (error) {
     console.error('Failed to get response text:', error);
     return null;
