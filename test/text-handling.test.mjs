@@ -18,7 +18,7 @@ test('multiline prompt is inserted with one fill call and preserves CRLF/LF exac
     },
   };
 
-  const prompt = '背景と目的\\r\\n現在の構成\\n\\n今回の改修内容';
+  const prompt = '背景と目的\r\n現在の構成\n\n今回の改修内容';
   await fillTextElement(element, prompt);
 
   assert.deepEqual(calls, [
@@ -37,7 +37,7 @@ test('response cleanup preserves paragraphs and code indentation', () => {
     '```text',
     '  indented',
     '```',
-  ].join('\\r\\n');
+  ].join('\r\n');
 
   assert.equal(
     cleanResponseText(raw),
@@ -49,6 +49,6 @@ test('response cleanup preserves paragraphs and code indentation', () => {
       '```text',
       '  indented',
       '```',
-    ].join('\\n'),
+    ].join('\n'),
   );
 });
