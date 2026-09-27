@@ -172,7 +172,7 @@ input[type="checkbox"] { margin-right: .45em; }
 </li>
 <li>この表示形式に対応した後、PythonのMCPクライアントから文字列応答を取得し、終了コード0を確認した。画面構造は変わり得るため、取得不能になった場合は実画面のDOMと完了表示を再確認する。
 </li>
-<li>Pythonサンプルは <code>--image &lt;パス&gt;</code> を指定すると <code>chatgpt_upload</code> を呼び、画像と質問をChatGPTへ渡す。複数ファイルは <code>--image</code> を繰り返す。現行ツール仕様では画像付き呼び出しに <code>--model</code> / <code>--project</code> を併用できない。
+<li>Pythonサンプルは対話形式で、最初の入力に <code>chatgpt_ask</code> または <code>chatgpt_upload</code>、続く入力に <code>chatgpt_reply</code> を使い、同じ会話を続ける。<code>--image &lt;パス&gt;</code> を繰り返して複数ファイルを最初の質問へ添付できる。<code>--once</code> と最初の質問を指定すると従来の1回実行になる。現行ツール仕様では画像付き呼び出しに <code>--model</code> / <code>--project</code> を併用できない。
 </li>
 </ul>
 </article></main>

@@ -46,27 +46,39 @@ All tools are **blocking** — they return only when the response is ready (or t
 
 ## Try from Python
 
-The example client starts this MCP server over stdio and sends one prompt. It requires Python 3.11+, Node.js, and the Python MCP SDK:
+The example client starts this MCP server over stdio and keeps the same ChatGPT conversation open for follow-up questions. It requires Python 3.11+, Node.js, and the Python MCP SDK:
 
 ```powershell
 python -m pip install mcp
 npm run build
+python .\examples\python_ask.py
+```
+
+Enter your first question when prompted, then type follow-up questions. Enter `exit` or `終了` to quit. You can also pass the first question on the command line:
+
+```powershell
 python .\examples\python_ask.py "Explain MCP in one sentence."
 ```
 
-To attach an image, pass its path with `--image` and include your question as the final argument:
+To attach an image, pass its path with `--image`. The script will ask for your first question if you omit it:
+
+```powershell
+python .\examples\python_ask.py --image "C:\path\to\screenshot.png"
+```
+
+The first question can also be passed on the command line after the image path. Repeat `--image` to attach multiple files. Image uploads currently cannot be combined with `--model` or `--project`.
 
 ```powershell
 python .\examples\python_ask.py --image "C:\path\to\screenshot.png" "この画像の内容を説明してください。"
 ```
-
-Repeat `--image` to attach multiple files. Image uploads currently cannot be combined with `--model` or `--project`.
 
 Optional flags select the ChatGPT mode or project:
 
 ```powershell
 python .\examples\python_ask.py --model Pro --project claude "Compare these two approaches."
 ```
+
+Use `--once` with a first prompt to send one request and exit without entering interactive follow-up mode.
 
 The script reuses the `HOME` value in the local Codex `chatgpt` server configuration when available, so it uses that server's browser profile.
 

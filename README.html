@@ -189,15 +189,19 @@ input[type="checkbox"] { margin-right: .45em; }
 </tbody></table>
 <p>All tools are <strong>blocking</strong> — they return only when the response is ready (or timeout). This matches the ergonomics of Codex and Gemini MCPs.</p>
 <h2>Try from Python</h2>
-<p>The example client starts this MCP server over stdio and sends one prompt. It requires Python 3.11+, Node.js, and the Python MCP SDK:</p>
+<p>The example client starts this MCP server over stdio and keeps the same ChatGPT conversation open for follow-up questions. It requires Python 3.11+, Node.js, and the Python MCP SDK:</p>
 <pre><code class="language-powershell">python -m pip install mcp
 npm run build
-python .\examples\python_ask.py &quot;Explain MCP in one sentence.&quot;</code></pre>
-<p>To attach an image, pass its path with <code>--image</code> and include your question as the final argument:</p>
+python .\examples\python_ask.py</code></pre>
+<p>Enter your first question when prompted, then type follow-up questions. Enter <code>exit</code> or <code>終了</code> to quit. You can also pass the first question on the command line:</p>
+<pre><code class="language-powershell">python .\examples\python_ask.py &quot;Explain MCP in one sentence.&quot;</code></pre>
+<p>To attach an image, pass its path with <code>--image</code>. The script will ask for your first question if you omit it:</p>
+<pre><code class="language-powershell">python .\examples\python_ask.py --image &quot;C:\path\to\screenshot.png&quot;</code></pre>
+<p>The first question can also be passed on the command line after the image path. Repeat <code>--image</code> to attach multiple files. Image uploads currently cannot be combined with <code>--model</code> or <code>--project</code>.</p>
 <pre><code class="language-powershell">python .\examples\python_ask.py --image &quot;C:\path\to\screenshot.png&quot; &quot;この画像の内容を説明してください。&quot;</code></pre>
-<p>Repeat <code>--image</code> to attach multiple files. Image uploads currently cannot be combined with <code>--model</code> or <code>--project</code>.</p>
 <p>Optional flags select the ChatGPT mode or project:</p>
 <pre><code class="language-powershell">python .\examples\python_ask.py --model Pro --project claude &quot;Compare these two approaches.&quot;</code></pre>
+<p>Use <code>--once</code> with a first prompt to send one request and exit without entering interactive follow-up mode.</p>
 <p>The script reuses the <code>HOME</code> value in the local Codex <code>chatgpt</code> server configuration when available, so it uses that server&#x27;s browser profile.</p>
 <h2>Setup</h2>
 <pre><code class="language-bash"># Install dependencies
