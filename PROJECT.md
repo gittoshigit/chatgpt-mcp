@@ -22,4 +22,5 @@
 ## 応答取得の確認記録
 - 2026-09-27: 実際のChatGPT画面では旧来の `conversation-turn-*` と `data-message-author-role="assistant"` が見つからず、回答本文は `main [class*="MarkdownRoot"]` にあった。完了後のコピー操作は、その回答を含む要素内の `aria-label="コピーする"` のボタンで確認した。
 - この表示形式に対応した後、PythonのMCPクライアントから文字列応答を取得し、終了コード0を確認した。画面構造は変わり得るため、取得不能になった場合は実画面のDOMと完了表示を再確認する。
+- Pythonサンプルは `--image <パス>` を指定すると `chatgpt_upload` を呼び、画像と質問をChatGPTへ渡す。複数ファイルは `--image` を繰り返す。現行ツール仕様では画像付き呼び出しに `--model` / `--project` を併用できない。
 

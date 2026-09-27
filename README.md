@@ -54,6 +54,14 @@ npm run build
 python .\examples\python_ask.py "Explain MCP in one sentence."
 ```
 
+To attach an image, pass its path with `--image` and include your question as the final argument:
+
+```powershell
+python .\examples\python_ask.py --image "C:\path\to\screenshot.png" "この画像の内容を説明してください。"
+```
+
+Repeat `--image` to attach multiple files. Image uploads currently cannot be combined with `--model` or `--project`.
+
 Optional flags select the ChatGPT mode or project:
 
 ```powershell

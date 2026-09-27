@@ -193,6 +193,9 @@ input[type="checkbox"] { margin-right: .45em; }
 <pre><code class="language-powershell">python -m pip install mcp
 npm run build
 python .\examples\python_ask.py &quot;Explain MCP in one sentence.&quot;</code></pre>
+<p>To attach an image, pass its path with <code>--image</code> and include your question as the final argument:</p>
+<pre><code class="language-powershell">python .\examples\python_ask.py --image &quot;C:\path\to\screenshot.png&quot; &quot;この画像の内容を説明してください。&quot;</code></pre>
+<p>Repeat <code>--image</code> to attach multiple files. Image uploads currently cannot be combined with <code>--model</code> or <code>--project</code>.</p>
 <p>Optional flags select the ChatGPT mode or project:</p>
 <pre><code class="language-powershell">python .\examples\python_ask.py --model Pro --project claude &quot;Compare these two approaches.&quot;</code></pre>
 <p>The script reuses the <code>HOME</code> value in the local Codex <code>chatgpt</code> server configuration when available, so it uses that server&#x27;s browser profile.</p>

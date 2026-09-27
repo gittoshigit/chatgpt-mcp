@@ -172,6 +172,8 @@ input[type="checkbox"] { margin-right: .45em; }
 </li>
 <li>この表示形式に対応した後、PythonのMCPクライアントから文字列応答を取得し、終了コード0を確認した。画面構造は変わり得るため、取得不能になった場合は実画面のDOMと完了表示を再確認する。
 </li>
+<li>Pythonサンプルは <code>--image &lt;パス&gt;</code> を指定すると <code>chatgpt_upload</code> を呼び、画像と質問をChatGPTへ渡す。複数ファイルは <code>--image</code> を繰り返す。現行ツール仕様では画像付き呼び出しに <code>--model</code> / <code>--project</code> を併用できない。
+</li>
 </ul>
 </article></main>
 </body>

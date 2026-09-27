@@ -20,21 +20,38 @@ from pathlib import Path
 from mcp import Client, StdioServerParameters
 
 
-async def ask(prompt: str, model: str | None, project: str | None, timeout: int) -> int:
+async def ask(
+    prompt: str,
+    model: str | None,
+    project: str | None,
+    timeout: int,
+    image_paths: list[str] | None = None,
+) -> int:
     server_script = Path(__file__).resolve().parents[1] / "dist" / "index.js"
     if not server_script.is_file():
         print(f"MCP server entrypoint not found: {server_script}", file=sys.stderr)
         print("Build it in the chatgpt-mcp project with: npm run build", file=sys.stderr)
         return 2
 
-    arguments: dict[str, object] = {
-        "prompt": prompt,
-        "timeout_minutes": timeout,
-    }
-    if model:
-        arguments["model"] = model
-    if project:
-        arguments["project"] = project
+    if image_paths:
+        resolved_images = [Path(image).expanduser().resolve() for image in image_paths]
+        missing_images = [str(image) for image in resolved_images if not image.is_file()]
+        if missing_images:
+            print("Image file not found: " + ", ".join(missing_images), file=sys.stderr)
+            return 2
+        tool_name = "chatgpt_upload"
+        arguments: dict[str, object] = {
+            "file_paths": [str(image) for image in resolved_images],
+            "prompt": prompt,
+            "timeout_minutes": timeout,
+        }
+    else:
+        tool_name = "chatgpt_ask"
+        arguments = {"prompt": prompt, "timeout_minutes": timeout}
+        if model:
+            arguments["model"] = model
+        if project:
+            arguments["project"] = project
 
     server = StdioServerParameters(
         command="node",
@@ -42,7 +59,7 @@ async def ask(prompt: str, model: str | None, project: str | None, timeout: int)
         env={"HOME": configured_server_home()},
     )
     async with Client(server, read_timeout_seconds=timeout * 60 + 30) as client:
-        result = await client.call_tool("chatgpt_ask", arguments)
+        result = await client.call_tool(tool_name, arguments)
 
     if result.is_error:
         for item in result.content:
@@ -85,14 +102,24 @@ def main() -> int:
     parser.add_argument("prompt", help="Prompt to send to ChatGPT")
     parser.add_argument("--model", help='Optional ChatGPT mode, for example "Pro" or "Thinking"')
     parser.add_argument("--project", help="Optional ChatGPT project name")
+    parser.add_argument(
+        "--image",
+        action="append",
+        metavar="PATH",
+        help="Image or other file to upload (repeat to attach multiple files)",
+    )
     parser.add_argument("--timeout", type=int, default=60, help="Timeout in minutes (1-120; default: 60)")
     options = parser.parse_args()
 
     if not 1 <= options.timeout <= 120:
         parser.error("--timeout must be between 1 and 120 minutes")
+    if options.image and (options.model or options.project):
+        parser.error("--image cannot be combined with --model or --project")
 
     try:
-        return asyncio.run(ask(options.prompt, options.model, options.project, options.timeout))
+        return asyncio.run(
+            ask(options.prompt, options.model, options.project, options.timeout, options.image)
+        )
     except FileNotFoundError:
         print("Node.js was not found. Install Node.js or add node to PATH.", file=sys.stderr)
         return 2
