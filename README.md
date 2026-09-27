@@ -44,6 +44,24 @@ The server launches a persistent Chromium browser on first use, maintains login 
 
 All tools are **blocking** — they return only when the response is ready (or timeout). This matches the ergonomics of Codex and Gemini MCPs.
 
+## Try from Python
+
+The example client starts this MCP server over stdio and sends one prompt. It requires Python 3.11+, Node.js, and the Python MCP SDK:
+
+```powershell
+python -m pip install mcp
+npm run build
+python .\examples\python_ask.py "Explain MCP in one sentence."
+```
+
+Optional flags select the ChatGPT mode or project:
+
+```powershell
+python .\examples\python_ask.py --model Pro --project claude "Compare these two approaches."
+```
+
+The script reuses the `HOME` value in the local Codex `chatgpt` server configuration when available, so it uses that server's browser profile.
+
 ## Setup
 
 ```bash

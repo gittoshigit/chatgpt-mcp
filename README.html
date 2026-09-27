@@ -188,6 +188,14 @@ input[type="checkbox"] { margin-right: .45em; }
 </tr>
 </tbody></table>
 <p>All tools are <strong>blocking</strong> — they return only when the response is ready (or timeout). This matches the ergonomics of Codex and Gemini MCPs.</p>
+<h2>Try from Python</h2>
+<p>The example client starts this MCP server over stdio and sends one prompt. It requires Python 3.11+, Node.js, and the Python MCP SDK:</p>
+<pre><code class="language-powershell">python -m pip install mcp
+npm run build
+python .\examples\python_ask.py &quot;Explain MCP in one sentence.&quot;</code></pre>
+<p>Optional flags select the ChatGPT mode or project:</p>
+<pre><code class="language-powershell">python .\examples\python_ask.py --model Pro --project claude &quot;Compare these two approaches.&quot;</code></pre>
+<p>The script reuses the <code>HOME</code> value in the local Codex <code>chatgpt</code> server configuration when available, so it uses that server&#x27;s browser profile.</p>
 <h2>Setup</h2>
 <pre><code class="language-bash"># Install dependencies
 npm install
