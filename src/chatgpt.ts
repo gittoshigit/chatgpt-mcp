@@ -79,6 +79,24 @@ export function cleanResponseText(text: string): string {
   return cleaned;
 }
 
+export interface ResponseCandidates {
+  turnTexts: string[];
+  assistantTexts: string[];
+  modernTexts: string[];
+}
+
+export function selectLatestResponseText(candidates: ResponseCandidates): string | null {
+  for (const candidate of [
+    ...candidates.turnTexts,
+    ...candidates.assistantTexts,
+    ...candidates.modernTexts,
+  ]) {
+    const cleaned = cleanResponseText(candidate);
+    if (cleaned.length > 0) return cleaned;
+  }
+  return null;
+}
+
 // ============================================
 // Session management
 // ============================================
@@ -149,70 +167,61 @@ async function checkLoginStatus(): Promise<boolean> {
 /**
  * Get the latest assistant response text from the page.
  *
- * ChatGPT DOM as of 2026-02:
- * - Each message is in [data-testid="conversation-turn-N"]
- * - Turn 1 = user, Turn 2 = assistant, Turn 3 = user, etc.
- * - The response text is the innerText of the last turn, minus UI chrome
- * - .markdown/.prose selectors may or may not exist depending on response type
- *
- * Strategy: get the last conversation turn's innerText via the browser's
- * HTMLElement.innerText (which respects visibility), then clean UI phrases.
+ * The UI currently renders assistant text in a MarkdownRoot element even when
+ * older conversation-turn and author-role attributes are absent.
  */
+export function collectResponseCandidates(): ResponseCandidates {
+  const turnTexts: string[] = [];
+  const assistantTexts: string[] = [];
+  const modernTexts: string[] = [];
+
+  const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]');
+  if (turns.length >= 2) {
+    const lastTurn = turns[turns.length - 1] as HTMLElement;
+    const innerText = lastTurn.innerText?.trim();
+    if (innerText) turnTexts.push(innerText);
+
+    const clone = lastTurn.cloneNode(true) as Element;
+    const chromeSelectors = [
+      'button', '[role="button"]',
+      '[class*="actions"]', '[class*="toolbar"]',
+      'nav', 'header', 'footer',
+      '[class*="thinking"]', '[class*="reasoning"]',
+      '[data-testid*="thinking"]',
+    ];
+    for (const sel of chromeSelectors) {
+      clone.querySelectorAll(sel).forEach(element => element.remove());
+    }
+    const stripped = clone.textContent?.trim();
+    if (stripped) turnTexts.push(stripped);
+
+    const markdown = lastTurn.querySelector('.markdown, .prose, [class*="markdown"]');
+    const mdText = markdown?.textContent?.trim();
+    if (mdText) turnTexts.push(mdText);
+  }
+
+  const assistantMsgs = document.querySelectorAll('[data-message-author-role="assistant"]');
+  if (assistantMsgs.length > 0) {
+    const lastMsg = assistantMsgs[assistantMsgs.length - 1] as HTMLElement;
+    const msgText = lastMsg.innerText?.trim();
+    if (msgText) assistantTexts.push(msgText);
+  }
+
+  const modernRoots = document.querySelectorAll('main [class*="MarkdownRoot"]');
+  if (modernRoots.length > 0) {
+    const lastRoot = modernRoots[modernRoots.length - 1] as HTMLElement;
+    const rootText = lastRoot.innerText?.trim();
+    if (rootText) modernTexts.push(rootText);
+  }
+
+  return { turnTexts, assistantTexts, modernTexts };
+}
+
 async function getLatestResponseText(): Promise<string | null> {
   try {
     const page = await getPage();
-
-    const candidates = await page.evaluate(() => {
-      const texts: string[] = [];
-
-      // Get all conversation turns
-      const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]');
-      if (turns.length < 2) return texts;
-
-      const lastTurn = turns[turns.length - 1] as HTMLElement;
-
-      // Strategy 1: Use innerText of the turn element (respects visibility, skips hidden elements)
-      // This is the most reliable because it gets exactly what the user sees
-      const innerText = lastTurn.innerText?.trim();
-      if (innerText) texts.push(innerText);
-
-      // Strategy 2: Clone, strip chrome elements, get textContent
-      const clone = lastTurn.cloneNode(true) as Element;
-      const chromeSelectors = [
-        'button', '[role="button"]',
-        '[class*="actions"]', '[class*="toolbar"]',
-        'nav', 'header', 'footer',
-        '[class*="thinking"]', '[class*="reasoning"]',
-        '[data-testid*="thinking"]',
-      ];
-      for (const sel of chromeSelectors) {
-        clone.querySelectorAll(sel).forEach(e => e.remove());
-      }
-      const stripped = clone.textContent?.trim();
-      if (stripped) texts.push(stripped);
-
-      // Strategy 3: Look for markdown/prose inside the turn
-      const markdown = lastTurn.querySelector('.markdown, .prose, [class*="markdown"]');
-      const mdText = markdown?.textContent?.trim();
-      if (mdText) texts.push(mdText);
-
-      // Strategy 4: data-message-author-role="assistant" anywhere on page
-      const assistantMsgs = document.querySelectorAll('[data-message-author-role="assistant"]');
-      if (assistantMsgs.length > 0) {
-        const lastMsg = assistantMsgs[assistantMsgs.length - 1] as HTMLElement;
-        const msgText = lastMsg.innerText?.trim();
-        if (msgText) texts.push(msgText);
-      }
-
-      return texts;
-    });
-
-    for (const candidate of candidates) {
-      const cleaned = cleanResponseText(candidate);
-      if (cleaned.length > 0) return cleaned;
-    }
-
-    return null;
+    const candidates = await page.evaluate(collectResponseCandidates);
+    return selectLatestResponseText(candidates);
   } catch (error) {
     console.error('Failed to get response text:', error);
     return null;
@@ -232,45 +241,48 @@ async function getLatestResponseText(): Promise<string | null> {
  * - [class*="streaming"] matches unrelated elements — UNRELIABLE
  * - data-is-streaming rarely set — UNRELIABLE
  *
- * Strategy: check if the LAST conversation turn has a copy button inside it,
- * combined with content stability.
+ * Strategy: check the latest response's copy action, combined with content
+ * stability. The current UI uses aria-labels instead of the old turn test IDs.
  */
+export function collectGenerationIndicators() {
+  const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]');
+  const turnCount = turns.length;
+
+  let lastTurnHasCopy = false;
+  let isThinking = false;
+  if (turns.length >= 2) {
+    const lastTurn = turns[turns.length - 1];
+    lastTurnHasCopy = !!lastTurn.querySelector('[data-testid="copy-turn-action-button"]');
+
+    const turnText = (lastTurn as HTMLElement).innerText || '';
+    const thinkingPatterns = /\b(thinking|reasoning)\b/i;
+    const hasThinkingUI = !!lastTurn.querySelector(
+      '[class*="thinking"], [class*="reasoning"], [data-testid*="thinking"]'
+    );
+    isThinking = hasThinkingUI || (thinkingPatterns.test(turnText) && turnText.length < 200);
+  }
+
+  const modernRoots = document.querySelectorAll('main [class*="MarkdownRoot"]');
+  const latestModernRoot = modernRoots[modernRoots.length - 1];
+  const latestModernTurn = latestModernRoot?.closest('.group.flex.flex-col.pb-2.pt-2');
+  const modernHasCopy = !!latestModernTurn?.querySelector(
+    'button[aria-label="コピーする"], button[aria-label="Copy"], button[aria-label="Copy response"]'
+  );
+
+  return { turnCount, lastTurnHasCopy, modernHasCopy, isThinking };
+}
+
 async function isGenerationComplete(
   lastContentLength: number,
   stableCount: number,
 ): Promise<{ complete: boolean; contentLength: number; newStableCount: number }> {
   const page = await getPage();
-
-  const indicators = await page.evaluate(() => {
-    const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]');
-    const turnCount = turns.length;
-
-    // Check if the LAST turn has a copy button inside it
-    // This is the key signal — copy button appears only when that turn is complete
-    let lastTurnHasCopy = false;
-    // Check if the turn appears to be in a thinking state
-    let isThinking = false;
-    if (turns.length >= 2) {
-      const lastTurn = turns[turns.length - 1];
-      lastTurnHasCopy = !!lastTurn.querySelector('[data-testid="copy-turn-action-button"]');
-
-      // Detect thinking state: look for thinking indicators in the turn
-      const turnText = (lastTurn as HTMLElement).innerText || '';
-      const thinkingPatterns = /\b(thinking|reasoning)\b/i;
-      const hasThinkingUI = !!lastTurn.querySelector(
-        '[class*="thinking"], [class*="reasoning"], [data-testid*="thinking"]'
-      );
-      // "Thinking" as a standalone label at the start of the turn content
-      isThinking = hasThinkingUI || (thinkingPatterns.test(turnText) && turnText.length < 200);
-    }
-
-    return { turnCount, lastTurnHasCopy, isThinking };
-  });
+  const indicators = await page.evaluate(collectGenerationIndicators);
 
   const currentText = await getLatestResponseText();
   const currentLength = currentText?.length ?? 0;
 
-  console.error(`[poll] turns=${indicators.turnCount} lastTurnCopy=${indicators.lastTurnHasCopy} thinking=${indicators.isThinking} contentLen=${currentLength} stable=${stableCount}`);
+  console.error(`[poll] turns=${indicators.turnCount} lastTurnCopy=${indicators.lastTurnHasCopy} modernCopy=${indicators.modernHasCopy} thinking=${indicators.isThinking} contentLen=${currentLength} stable=${stableCount}`);
 
   // Check content stability
   let newStableCount = stableCount;
@@ -290,7 +302,7 @@ async function isGenerationComplete(
   // thinking phase, where a thinking summary label would appear stable and trigger completion.
   const FALLBACK_STABLE_THRESHOLD = 10;
   const highConfidence =
-    (indicators.lastTurnHasCopy && currentLength > 0 && newStableCount >= 1) ||
+    ((indicators.lastTurnHasCopy || indicators.modernHasCopy) && currentLength > 0 && newStableCount >= 1) ||
     (!indicators.isThinking && currentLength > 0 && newStableCount >= FALLBACK_STABLE_THRESHOLD);
 
   console.error(`[poll] → complete=${highConfidence}`);

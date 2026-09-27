@@ -166,6 +166,13 @@ input[type="checkbox"] { margin-right: .45em; }
 </ul>
 </li>
 </ol>
+<h2>応答取得の確認記録</h2>
+<ul>
+<li>2026-09-27: 実際のChatGPT画面では旧来の <code>conversation-turn-*</code> と <code>data-message-author-role=&quot;assistant&quot;</code> が見つからず、回答本文は <code>main [class*=&quot;MarkdownRoot&quot;]</code> にあった。完了後のコピー操作は、その回答を含む要素内の <code>aria-label=&quot;コピーする&quot;</code> のボタンで確認した。
+</li>
+<li>この表示形式に対応した後、PythonのMCPクライアントから文字列応答を取得し、終了コード0を確認した。画面構造は変わり得るため、取得不能になった場合は実画面のDOMと完了表示を再確認する。
+</li>
+</ul>
 </article></main>
 </body>
 </html>

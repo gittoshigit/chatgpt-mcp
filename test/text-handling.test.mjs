@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
 
 import { fillTextElement } from '../dist/browser.js';
-import { cleanResponseText } from '../dist/chatgpt.js';
+import {
+  cleanResponseText,
+  collectGenerationIndicators,
+  collectResponseCandidates,
+  selectLatestResponseText,
+} from '../dist/chatgpt.js';
 
 test('multiline prompt is inserted with one fill call and preserves CRLF/LF exactly', async () => {
   const calls = [];
@@ -51,4 +57,46 @@ test('response cleanup preserves paragraphs and code indentation', () => {
       '```',
     ].join('\n'),
   );
+});
+
+test('current ChatGPT markup extracts the reply without treating the prompt as a reply', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`
+      <main>
+        <div class="bg-user-message"><div class="text-size-chat whitespace-pre-wrap">Return CHATGPT_MCP_PYTHON_OK</div></div>
+      </main>
+    `);
+    let candidates = await page.evaluate(collectResponseCandidates);
+    assert.equal(selectLatestResponseText(candidates), null);
+
+    await page.setContent(`
+      <main>
+        <div class="bg-user-message"><div class="text-size-chat whitespace-pre-wrap">Return CHATGPT_MCP_PYTHON_OK</div></div>
+        <div class="MarkdownRoot-current"><p><span>CHATGPT_MCP_PYTHON_OK</span></p></div>
+      </main>
+    `);
+    candidates = await page.evaluate(collectResponseCandidates);
+    assert.equal(selectLatestResponseText(candidates), 'CHATGPT_MCP_PYTHON_OK');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('the latest response needs its own copy action to count as complete', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const previous = '<div class="group flex flex-col pb-2 pt-2"><div class="MarkdownRoot-old">Earlier reply</div><button aria-label="コピーする"></button></div>';
+    const current = (copyAction) => `<div class="group flex flex-col pb-2 pt-2"><div class="MarkdownRoot-current">Current reply</div>${copyAction}</div>`;
+
+    await page.setContent(`<main>${previous}${current('')}</main>`);
+    assert.equal((await page.evaluate(collectGenerationIndicators)).modernHasCopy, false);
+
+    await page.setContent(`<main>${previous}${current('<button aria-label="コピーする"></button>')}</main>`);
+    assert.equal((await page.evaluate(collectGenerationIndicators)).modernHasCopy, true);
+  } finally {
+    await browser.close();
+  }
 });
