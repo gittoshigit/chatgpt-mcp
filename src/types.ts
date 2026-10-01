@@ -36,22 +36,28 @@ export const SELECTORS = {
   // Prompt input area
   promptTextarea: [
     '#prompt-textarea',
+    '#pending-home-input',
     '[data-testid="prompt-textarea"]',
+    'textarea[placeholder*="ChatGPT"]',
     'textarea[placeholder*="Message"]',
+    'textarea',
     'div[contenteditable="true"]',
   ],
 
   // Send button
   sendButton: [
-    '[data-testid="send-button"]',
+    'button[aria-label="送信"]',
     'button[aria-label*="Send"]',
+    'button[type="submit"]',
+    '[data-testid="send-button"]',
     'button[data-testid="composer-send-button"]',
   ],
 
   // Stop generating button (presence = still generating)
   stopButton: [
-    '[data-testid="stop-button"]',
+    'button[aria-label="停止"]',
     'button[aria-label*="Stop"]',
+    '[data-testid="stop-button"]',
     'button:has-text("Stop generating")',
   ],
 
@@ -86,13 +92,16 @@ export const SELECTORS = {
   loggedInIndicator: [
     '[data-testid="profile-button"]',
     'button[aria-label*="Profile"]',
+    'button[aria-label*="プロフィール"]',
     'img[alt*="User"]',
   ],
 
   // Login prompt (if present, user needs to log in)
   loginPrompt: [
     'button:has-text("Log in")',
+    'button:has-text("ログイン")',
     'a:has-text("Log in")',
+    'a:has-text("ログイン")',
     '[data-testid="login-button"]',
   ],
 
@@ -120,5 +129,5 @@ export const CONFIG = {
   maxWaitTime: 3600000,
   // Default project — all new chats go here unless overridden.
   // This is the ChatGPT project name as shown in the sidebar.
-  defaultProject: 'claude',
+  defaultProject: process.env.CHATGPT_DEFAULT_PROJECT || '',
 } as const;

@@ -32,13 +32,13 @@ export async function launchBrowser(): Promise<Page> {
   await ensureUserDataDir();
 
   context = await chromium.launchPersistentContext(CONFIG.userDataDir, {
+    channel: 'chrome',
     headless: false,
     args: [
       '--disable-blink-features=AutomationControlled',
       '--no-sandbox',
       '--hide-crash-restore-bubble',
     ],
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     viewport: { width: 1280, height: 800 },
   });
 

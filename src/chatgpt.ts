@@ -120,7 +120,7 @@ export async function ensureSession(): Promise<void> {
   await wait(3000);
 
   let isLoggedIn = false;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     isLoggedIn = await checkLoginStatus();
     if (isLoggedIn) break;
     console.error(`[session] Login check attempt ${attempt + 1} failed, retrying...`);
@@ -262,14 +262,21 @@ export function collectGenerationIndicators() {
     isThinking = hasThinkingUI || (thinkingPatterns.test(turnText) && turnText.length < 200);
   }
 
-  const modernRoots = document.querySelectorAll('main [class*="MarkdownRoot"]');
-  const latestModernRoot = modernRoots[modernRoots.length - 1];
-  const latestModernTurn = latestModernRoot?.closest('.group.flex.flex-col.pb-2.pt-2');
-  const modernHasCopy = !!latestModernTurn?.querySelector(
-    'button[aria-label="コピーする"], button[aria-label="Copy"], button[aria-label="Copy response"]'
+  // Modern ChatGPT UI copy button:
+  // Assistant responses have aria-label="コピーする" or "Copy" / "Copy response"
+  // (User prompts have "メッセージをコピーする", so we explicitly match the assistant button)
+  const assistantCopyButtons = document.querySelectorAll(
+    'main button[aria-label="コピーする"], main button[aria-label="Copy"], main button[aria-label="Copy response"]'
   );
+  const modernHasCopy = assistantCopyButtons.length > 0;
 
-  return { turnCount, lastTurnHasCopy, modernHasCopy, isThinking };
+  // Stop button presence indicates active streaming
+  const stopButton = document.querySelector(
+    'button[aria-label="停止"], button[aria-label*="Stop"], [data-testid="stop-button"]'
+  );
+  const isStreaming = !!stopButton;
+
+  return { turnCount, lastTurnHasCopy, modernHasCopy, isThinking, isStreaming };
 }
 
 async function isGenerationComplete(
@@ -282,7 +289,7 @@ async function isGenerationComplete(
   const currentText = await getLatestResponseText();
   const currentLength = currentText?.length ?? 0;
 
-  console.error(`[poll] turns=${indicators.turnCount} lastTurnCopy=${indicators.lastTurnHasCopy} modernCopy=${indicators.modernHasCopy} thinking=${indicators.isThinking} contentLen=${currentLength} stable=${stableCount}`);
+  console.error(`[poll] turns=${indicators.turnCount} lastTurnCopy=${indicators.lastTurnHasCopy} modernCopy=${indicators.modernHasCopy} streaming=${indicators.isStreaming} thinking=${indicators.isThinking} contentLen=${currentLength} stable=${stableCount}`);
 
   // Check content stability
   let newStableCount = stableCount;
@@ -293,17 +300,12 @@ async function isGenerationComplete(
   }
 
   // Complete if:
-  // 1. Last turn has copy button AND we have content AND it's been stable for 1 check
-  //    (copy button is the authoritative signal — it only appears when generation is truly done)
-  // 2. Fallback: content stable for 10+ checks (~3+ minutes) AND not in thinking state
-  //    (very conservative — only for edge cases where copy button never appears)
-  //
-  // BUG FIX: Previously stableThreshold=3 caused false positives during GPT-5.2 Pro's
-  // thinking phase, where a thinking summary label would appear stable and trigger completion.
+  // 1. Not streaming AND (last turn has copy button OR modern assistant copy button exists) AND we have content AND it's been stable for 1 check
+  // 2. Fallback: Not streaming AND content stable for 10+ checks (~3+ minutes) AND not in thinking state
   const FALLBACK_STABLE_THRESHOLD = 10;
   const highConfidence =
-    ((indicators.lastTurnHasCopy || indicators.modernHasCopy) && currentLength > 0 && newStableCount >= 1) ||
-    (!indicators.isThinking && currentLength > 0 && newStableCount >= FALLBACK_STABLE_THRESHOLD);
+    (!indicators.isStreaming && (indicators.lastTurnHasCopy || indicators.modernHasCopy) && currentLength > 0 && newStableCount >= 1) ||
+    (!indicators.isStreaming && !indicators.isThinking && currentLength > 0 && newStableCount >= FALLBACK_STABLE_THRESHOLD);
 
   console.error(`[poll] → complete=${highConfidence}`);
 
@@ -329,16 +331,20 @@ async function sendPromptText(prompt: string): Promise<void> {
 
   await wait(500);
 
+  const page = await getPage();
+  // Trigger input event for React-controlled textarea
+  await page.keyboard.press('Space');
+  await page.keyboard.press('Backspace');
+  await wait(300);
+
   const sent = await clickElement(SELECTORS.sendButton);
   if (!sent) {
-    const page = await getPage();
     await page.keyboard.press('Enter');
   }
 
-  await wait(1000);
+  await wait(2000);
 
   // Extract conversation ID from URL
-  const page = await getPage();
   const url = page.url();
   const match = url.match(/\/c\/([a-f0-9-]+)/);
   if (match) {
