@@ -24,4 +24,5 @@
 - この表示形式に対応した後、PythonのMCPクライアントから文字列応答を取得し、終了コード0を確認した。画面構造は変わり得るため、取得不能になった場合は実画面のDOMと完了表示を再確認する。
 - Pythonサンプルは対話形式で、最初の入力に `chatgpt_ask` または `chatgpt_upload`、続く入力に `chatgpt_reply` を使い、同じ会話を続ける。`--image <パス>` を繰り返して複数ファイルを最初の質問へ添付できる。`--once` と最初の質問を指定すると従来の1回実行になる。現行ツール仕様では画像付き呼び出しに `--model` / `--project` を併用できない。
 - 2026-10-02: Playwright付属ChromeでCloudflare Turnstile（「私はロボットではありません」）がループする現象に対し、過去の知見（REPOSITORY_LESSONS.md mem_20e76a8f33c146238402219119b40ea9）に基づき `channel: 'chrome'` で実機Google Chromeを使用し、Mac UserAgentの偽装を撤廃。また回答完了検知で特定のTailwindクラス名依存が壊れていたのを `button[aria-label="コピーする"]` の直接検出と `isStreaming` ガードに改修。日本語UIのホーム画面入力欄（`#pending-home-input`）、送信ボタン（`aria-label="送信"`）、プロフィール検出に対応。Antigravityからの `chatgpt_ask` で5秒での回答取得成功を確認。
+- 2026-10-03: `start_orchestrator.bat` からのChatGPT MCP相談時に終了検知ができない問題を解消。リポジトリ側で `dist/` が未ビルドのまま（古いTailwindクラス名依存）だった状態を解消。さらに最新回答のコピーボタン検出（`modernHasCopy`）において、先行する過去回答のコピーボタンを誤検知せず、Tailwindクラス名変化にも耐性を持つよう、祖先コンテナ探索およびDOMノード順（`latestModernRoot.compareDocumentPosition`）による検出へ改修し、単体テストを追加。
 

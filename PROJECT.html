@@ -174,6 +174,10 @@ input[type="checkbox"] { margin-right: .45em; }
 </li>
 <li>Pythonサンプルは対話形式で、最初の入力に <code>chatgpt_ask</code> または <code>chatgpt_upload</code>、続く入力に <code>chatgpt_reply</code> を使い、同じ会話を続ける。<code>--image &lt;パス&gt;</code> を繰り返して複数ファイルを最初の質問へ添付できる。<code>--once</code> と最初の質問を指定すると従来の1回実行になる。現行ツール仕様では画像付き呼び出しに <code>--model</code> / <code>--project</code> を併用できない。
 </li>
+<li>2026-10-02: Playwright付属ChromeでCloudflare Turnstile（「私はロボットではありません」）がループする現象に対し、過去の知見（REPOSITORY_LESSONS.md mem_20e76a8f33c146238402219119b40ea9）に基づき <code>channel: &#x27;chrome&#x27;</code> で実機Google Chromeを使用し、Mac UserAgentの偽装を撤廃。また回答完了検知で特定のTailwindクラス名依存が壊れていたのを <code>button[aria-label=&quot;コピーする&quot;]</code> の直接検出と <code>isStreaming</code> ガードに改修。日本語UIのホーム画面入力欄（<code>#pending-home-input</code>）、送信ボタン（<code>aria-label=&quot;送信&quot;</code>）、プロフィール検出に対応。Antigravityからの <code>chatgpt_ask</code> で5秒での回答取得成功を確認。
+</li>
+<li>2026-10-03: <code>start_orchestrator.bat</code> からのChatGPT MCP相談時に終了検知ができない問題を解消。リポジトリ側で <code>dist/</code> が未ビルドのまま（古いTailwindクラス名依存）だった状態を解消。さらに最新回答のコピーボタン検出（<code>modernHasCopy</code>）において、先行する過去回答のコピーボタンを誤検知せず、Tailwindクラス名変化にも耐性を持つよう、祖先コンテナ探索およびDOMノード順（<code>latestModernRoot.compareDocumentPosition</code>）による検出へ改修し、単体テストを追加。
+</li>
 </ul>
 </article></main>
 </body>

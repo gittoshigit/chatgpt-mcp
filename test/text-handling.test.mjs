@@ -100,3 +100,20 @@ test('the latest response needs its own copy action to count as complete', async
     await browser.close();
   }
 });
+
+test('modernHasCopy detects copy action even when Tailwind container classes change', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const previous = '<div><div class="MarkdownRoot-old">Earlier reply</div><button aria-label="コピーする"></button></div>';
+    const current = (copyAction) => `<div><div class="MarkdownRoot-current">Current reply</div>${copyAction}</div>`;
+
+    await page.setContent(`<main>${previous}${current('')}</main>`);
+    assert.equal((await page.evaluate(collectGenerationIndicators)).modernHasCopy, false);
+
+    await page.setContent(`<main>${previous}${current('<div><button aria-label="コピーする"></button></div>')}</main>`);
+    assert.equal((await page.evaluate(collectGenerationIndicators)).modernHasCopy, true);
+  } finally {
+    await browser.close();
+  }
+});

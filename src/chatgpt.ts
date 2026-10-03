@@ -265,10 +265,36 @@ export function collectGenerationIndicators() {
   // Modern ChatGPT UI copy button:
   // Assistant responses have aria-label="コピーする" or "Copy" / "Copy response"
   // (User prompts have "メッセージをコピーする", so we explicitly match the assistant button)
-  const assistantCopyButtons = document.querySelectorAll(
-    'main button[aria-label="コピーする"], main button[aria-label="Copy"], main button[aria-label="Copy response"]'
-  );
-  const modernHasCopy = assistantCopyButtons.length > 0;
+  // Ensure the copy button belongs to the latest assistant response, not an earlier turn.
+  let modernHasCopy = false;
+  const modernRoots = document.querySelectorAll('main [class*="MarkdownRoot"]');
+  if (modernRoots.length > 0) {
+    const latestModernRoot = modernRoots[modernRoots.length - 1];
+    const container = latestModernRoot.closest(
+      'article, [data-message-author-role="assistant"], [data-testid^="conversation-turn-"], .group'
+    );
+    if (container) {
+      modernHasCopy = !!container.querySelector(
+        'button[aria-label="コピーする"], button[aria-label="Copy"], button[aria-label="Copy response"]'
+      );
+    }
+    if (!modernHasCopy) {
+      const assistantCopyButtons = document.querySelectorAll(
+        'main button[aria-label="コピーする"], main button[aria-label="Copy"], main button[aria-label="Copy response"]'
+      );
+      for (const btn of assistantCopyButtons) {
+        if (latestModernRoot.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          modernHasCopy = true;
+          break;
+        }
+      }
+    }
+  } else {
+    const assistantCopyButtons = document.querySelectorAll(
+      'main button[aria-label="コピーする"], main button[aria-label="Copy"], main button[aria-label="Copy response"]'
+    );
+    modernHasCopy = assistantCopyButtons.length > 0;
+  }
 
   // Stop button presence indicates active streaming
   const stopButton = document.querySelector(
