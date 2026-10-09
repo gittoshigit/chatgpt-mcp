@@ -109,6 +109,12 @@ Add to `~/.claude.json` under `mcpServers`:
 }
 ```
 
+
+### Configuration
+
+- `CHATGPT_DEFAULT_REASONING_EFFORT`: Default thinking depth for `chatgpt_ask` (default: `high`). Allowed values: `instant`, `medium`, `high`.
+- `CHATGPT_DEFAULT_PROJECT`: Default ChatGPT project name for new conversations.
+
 ### First use
 
 On first `chatgpt_ask` call, a Chromium window opens at chatgpt.com. Log in manually once — cookies are persisted to `~/.chatgpt-mcp/user-data/state.json` for future sessions.

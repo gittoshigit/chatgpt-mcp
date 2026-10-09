@@ -762,13 +762,21 @@ export async function getReasoningEffort(): Promise<ReasoningResult> {
 /**
  * Set reasoning effort in the ChatGPT web UI.
  */
-export async function setReasoningEffort(target: ReasoningEffort | string): Promise<ReasoningResult> {
+export async function setReasoningEffort(target: ReasoningEffort | string, force = false): Promise<ReasoningResult> {
   const normalized = normalizeReasoningEffort(target);
   if (!normalized) {
     return {
       success: false,
       effort: null,
       message: `Invalid reasoning effort "${target}". Allowed values: instant, medium, high`,
+    };
+  }
+
+  if (!force && sessionState.currentReasoningEffort === normalized) {
+    return {
+      success: true,
+      effort: normalized,
+      message: `Reasoning effort is already set to ${normalized}`,
     };
   }
 
@@ -1031,6 +1039,11 @@ export async function blockingAsk(
       }
       targetEffort = targetEffort || modelAsEffort;
       effectiveModel = undefined;
+    }
+
+    // Default to configured reasoning effort if not explicitly specified
+    if (!targetEffort && CONFIG.defaultReasoningEffort) {
+      targetEffort = CONFIG.defaultReasoningEffort;
     }
 
     // Switch model if specified

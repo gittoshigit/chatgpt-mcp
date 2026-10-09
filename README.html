@@ -227,6 +227,13 @@ npm run build</code></pre>
   &quot;command&quot;: &quot;node&quot;,
   &quot;args&quot;: [&quot;/path/to/chatgpt-mcp/dist/index.js&quot;]
 }</code></pre>
+<h3>Configuration</h3>
+<ul>
+<li><code>CHATGPT_DEFAULT_REASONING_EFFORT</code>: Default thinking depth for <code>chatgpt_ask</code> (default: <code>high</code>). Allowed values: <code>instant</code>, <code>medium</code>, <code>high</code>.
+</li>
+<li><code>CHATGPT_DEFAULT_PROJECT</code>: Default ChatGPT project name for new conversations.
+</li>
+</ul>
 <h3>First use</h3>
 <p>On first <code>chatgpt_ask</code> call, a Chromium window opens at chatgpt.com. Log in manually once — cookies are persisted to <code>~/.chatgpt-mcp/user-data/state.json</code> for future sessions.</p>
 <h2>Key design decisions</h2>

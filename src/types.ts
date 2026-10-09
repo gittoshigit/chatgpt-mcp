@@ -167,4 +167,6 @@ export const CONFIG = {
   // Default project — all new chats go here unless overridden.
   // This is the ChatGPT project name as shown in the sidebar.
   defaultProject: process.env.CHATGPT_DEFAULT_PROJECT || '',
+  // Default reasoning effort (thinking depth) for requests
+  defaultReasoningEffort: (process.env.CHATGPT_DEFAULT_REASONING_EFFORT as ReasoningEffort) || 'high',
 } as const;

@@ -180,6 +180,8 @@ input[type="checkbox"] { margin-right: .45em; }
 </li>
 <li>2026-10-10: ChatGPT Web UIの「思考量（Instant / Medium / High）」切り替え新UIに対応。入力欄右下の「思考量 ∨」トリガーの検出、ARIA sliderおよびポップアップ操作による段階設定（Home/ArrowRightキーおよびマウスクリックフォールバック）、検証処理を実装。<code>chatgpt_ask</code> に <code>reasoning_effort</code> 引数を追加し、<code>model</code> への指定に対する後方互換も実装。<code>chatgpt_get_reasoning_effort</code> と <code>chatgpt_set_reasoning_effort</code> ツールを新設。
 </li>
+<li>2026-10-10: 思考量のデフォルト値を「High」に設定。<code>CONFIG.defaultReasoningEffort</code>（環境変数 <code>CHATGPT_DEFAULT_REASONING_EFFORT</code> で上書き可能）を導入し、<code>chatgpt_ask</code> 呼び出し時に思考量が省略された場合は自動的に High が適用されるよう対応。
+</li>
 </ul>
 </article></main>
 </body>
