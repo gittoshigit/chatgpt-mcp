@@ -36,11 +36,13 @@ The server launches a persistent Chromium browser on first use, maintains login 
 
 | Tool | Description |
 |------|-------------|
-| `chatgpt_ask` | Send prompt, optionally switch model/project, poll until complete, return response |
+| `chatgpt_ask` | Send prompt, optionally switch model/project/reasoning_effort, poll until complete, return response |
 | `chatgpt_reply` | Follow-up in current conversation (no model/project switch) |
 | `chatgpt_upload` | Upload files + optional prompt, poll for response |
 | `chatgpt_select_project` | Navigate to a ChatGPT Project by name |
 | `chatgpt_new_chat` | Start fresh conversation (stays in project if set) |
+| `chatgpt_get_reasoning_effort` | Read current reasoning effort (thinking depth: Instant / Medium / High) from UI |
+| `chatgpt_set_reasoning_effort` | Set reasoning effort ("instant", "medium", or "high") in ChatGPT web UI |
 
 All tools are **blocking** — they return only when the response is ready (or timeout). This matches the ergonomics of Codex and Gemini MCPs.
 

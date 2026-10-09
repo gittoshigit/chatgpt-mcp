@@ -4,6 +4,8 @@ import {
   SessionState,
   AskResult,
   SimpleResult,
+  ReasoningEffort,
+  ReasoningResult,
   SELECTORS,
   CONFIG,
 } from './types.js';
@@ -28,6 +30,7 @@ import { fibonacciBackoff, sleep } from './utils/backoff.js';
 let sessionState: SessionState = {
   isLoggedIn: false,
   currentModel: null,
+  currentReasoningEffort: null,
   conversationId: null,
   currentProjectUrl: null,
 };
@@ -615,6 +618,276 @@ export async function selectModel(modelName: string): Promise<string | null> {
 }
 
 // ============================================
+// Reasoning effort / Thinking depth control
+// ============================================
+
+export function normalizeReasoningEffort(val?: string | null): ReasoningEffort | null {
+  if (!val) return null;
+  const lower = val.trim().toLowerCase();
+  if (['instant', 'low', 'fast'].includes(lower)) return 'instant';
+  if (['medium', 'med', 'normal'].includes(lower)) return 'medium';
+  if (['high', 'deep', 'pro'].includes(lower)) return 'high';
+  return null;
+}
+
+const EFFORT_LEVELS: ReasoningEffort[] = ['instant', 'medium', 'high'];
+
+function parseEffortFromText(text: string | null): ReasoningEffort | null {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  if (lower.includes('instant')) return 'instant';
+  if (lower.includes('medium')) return 'medium';
+  if (lower.includes('high')) return 'high';
+  return null;
+}
+
+/**
+ * Find the reasoning effort trigger button on page.
+ */
+async function findReasoningTriggerButton(page: any): Promise<any | null> {
+  for (const sel of SELECTORS.reasoningTrigger) {
+    const el = await page.$(sel);
+    if (el && await el.isVisible()) {
+      return el;
+    }
+  }
+
+  // Fallback: check buttons with matching text
+  const buttons = await page.$$('button, [role="button"]');
+  for (const btn of buttons) {
+    if (await btn.isVisible()) {
+      const text = (await btn.innerText()).trim();
+      const ariaLabel = (await btn.getAttribute('aria-label')) || '';
+      if (/思考量|推論|Reasoning|Thinking/i.test(`${text} ${ariaLabel}`)) {
+        return btn;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Read current level from active popover/slider.
+ */
+async function readCurrentEffortFromUI(page: any): Promise<ReasoningEffort | null> {
+  // 1. Check popover text (e.g. "Instant >", "Medium >", "High >")
+  for (const sel of SELECTORS.reasoningPopover) {
+    const popovers = await page.$$(sel);
+    for (const popover of popovers) {
+      if (await popover.isVisible()) {
+        const text = await popover.innerText();
+        const effort = parseEffortFromText(text);
+        if (effort) return effort;
+      }
+    }
+  }
+
+  // 2. Check slider attributes
+  for (const sel of SELECTORS.reasoningSlider) {
+    const sliders = await page.$$(sel);
+    for (const slider of sliders) {
+      if (await slider.isVisible()) {
+        const valText = await slider.getAttribute('aria-valuetext');
+        const effort = parseEffortFromText(valText);
+        if (effort) return effort;
+
+        const valNow = await slider.getAttribute('aria-valuenow');
+        if (valNow === '0') return 'instant';
+        if (valNow === '1' || valNow === '50') return 'medium';
+        if (valNow === '2' || valNow === '100') return 'high';
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get current reasoning effort from ChatGPT web UI.
+ */
+export async function getReasoningEffort(): Promise<ReasoningResult> {
+  try {
+    await ensureSession();
+    const page = await getPage();
+
+    const triggerBtn = await findReasoningTriggerButton(page);
+    if (!triggerBtn) {
+      return {
+        success: false,
+        effort: sessionState.currentReasoningEffort,
+        message: 'Reasoning effort trigger button not found on page.',
+      };
+    }
+
+    // Open popover
+    await triggerBtn.click();
+    await wait(300);
+
+    const currentEffort = await readCurrentEffortFromUI(page);
+
+    // Close popover
+    await page.keyboard.press('Escape');
+    await wait(200);
+
+    if (currentEffort) {
+      sessionState.currentReasoningEffort = currentEffort;
+      return {
+        success: true,
+        effort: currentEffort,
+        message: `Current reasoning effort is "${currentEffort}"`,
+      };
+    }
+
+    return {
+      success: false,
+      effort: sessionState.currentReasoningEffort,
+      message: 'Could not detect current reasoning effort from popover.',
+    };
+  } catch (error) {
+    try {
+      const page = await getPage();
+      await page.keyboard.press('Escape');
+    } catch {}
+
+    return {
+      success: false,
+      effort: null,
+      message: `Failed to get reasoning effort: ${error instanceof Error ? error.message : String(error)}`,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Set reasoning effort in the ChatGPT web UI.
+ */
+export async function setReasoningEffort(target: ReasoningEffort | string): Promise<ReasoningResult> {
+  const normalized = normalizeReasoningEffort(target);
+  if (!normalized) {
+    return {
+      success: false,
+      effort: null,
+      message: `Invalid reasoning effort "${target}". Allowed values: instant, medium, high`,
+    };
+  }
+
+  try {
+    await ensureSession();
+    const page = await getPage();
+
+    // 1. Find trigger button
+    const triggerBtn = await findReasoningTriggerButton(page);
+    if (!triggerBtn) {
+      return {
+        success: false,
+        effort: null,
+        message: 'Reasoning effort trigger button not found on page.',
+      };
+    }
+
+    // 2. Click to open popover
+    await triggerBtn.click();
+    await wait(400);
+
+    // 3. Find slider
+    let sliderEl = null;
+    for (const sel of SELECTORS.reasoningSlider) {
+      const el = await page.$(sel);
+      if (el && await el.isVisible()) {
+        sliderEl = el;
+        break;
+      }
+    }
+
+    const targetIndex = EFFORT_LEVELS.indexOf(normalized); // 0 = instant, 1 = medium, 2 = high
+    let achieved = false;
+
+    // Method A: Keyboard navigation on slider (Home -> ArrowRight)
+    if (sliderEl) {
+      await sliderEl.focus();
+      await sliderEl.press('Home');
+      await wait(150);
+
+      for (let i = 0; i < targetIndex; i++) {
+        await sliderEl.press('ArrowRight');
+        await wait(150);
+      }
+
+      const current = await readCurrentEffortFromUI(page);
+      if (current === normalized) {
+        achieved = true;
+      }
+    }
+
+    // Method B: Mouse click on slider track (left 8%, center 50%, right 92%)
+    if (!achieved && sliderEl) {
+      const box = await sliderEl.boundingBox();
+      if (box) {
+        const xOffsets = [0.08, 0.50, 0.92];
+        const clickX = box.x + box.width * xOffsets[targetIndex];
+        const clickY = box.y + box.height / 2;
+        await page.mouse.click(clickX, clickY);
+        await wait(200);
+
+        const current = await readCurrentEffortFromUI(page);
+        if (current === normalized) {
+          achieved = true;
+        }
+      }
+    }
+
+    // Method C: Click on matching option / label inside popover
+    if (!achieved) {
+      const candidates = await page.$$(`button:has-text("${normalized}"), [role="menuitem"]:has-text("${normalized}"), [role="option"]:has-text("${normalized}")`);
+      for (const cand of candidates) {
+        if (await cand.isVisible()) {
+          await cand.click();
+          await wait(200);
+          const current = await readCurrentEffortFromUI(page);
+          if (current === normalized) {
+            achieved = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // 4. Close popover
+    await page.keyboard.press('Escape');
+    await wait(200);
+
+    const verified = achieved ? normalized : await readCurrentEffortFromUI(page);
+    if (achieved || verified === normalized) {
+      sessionState.currentReasoningEffort = normalized;
+      return {
+        success: true,
+        effort: normalized,
+        message: `Successfully set reasoning effort to ${normalized}`,
+      };
+    }
+
+    return {
+      success: false,
+      effort: verified,
+      message: `Failed to set reasoning effort to "${normalized}". Current observed: "${verified || 'unknown'}"`,
+    };
+  } catch (error) {
+    try {
+      const page = await getPage();
+      await page.keyboard.press('Escape');
+    } catch {}
+
+    return {
+      success: false,
+      effort: null,
+      message: `Error setting reasoning effort: ${error instanceof Error ? error.message : String(error)}`,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+// ============================================
 // Project selection (from gpt-bridge)
 // ============================================
 
@@ -719,6 +992,7 @@ export async function blockingAsk(
   model?: string,
   project?: string,
   timeoutMinutes = 60,
+  reasoningEffort?: string,
 ): Promise<AskResult> {
   try {
     await ensureSession();
@@ -745,10 +1019,24 @@ export async function blockingAsk(
       }
     }
 
+    // Handle model and reasoning effort resolution
+    let effectiveModel = model;
+    let targetEffort = normalizeReasoningEffort(reasoningEffort);
+
+    // Backward compatibility: If model is 'instant', 'medium', or 'high', treat as reasoning effort
+    const modelAsEffort = normalizeReasoningEffort(model);
+    if (modelAsEffort) {
+      if (targetEffort && targetEffort !== modelAsEffort) {
+        throw new Error(`Conflicting reasoning effort specified: model="${model}" vs reasoning_effort="${reasoningEffort}"`);
+      }
+      targetEffort = targetEffort || modelAsEffort;
+      effectiveModel = undefined;
+    }
+
     // Switch model if specified
-    if (model) {
+    if (effectiveModel) {
       try {
-        await selectModel(model);
+        await selectModel(effectiveModel);
       } catch (error) {
         return {
           response: '',
@@ -758,6 +1046,18 @@ export async function blockingAsk(
           poll_count: 0,
           error: `Model selection failed: ${error instanceof Error ? error.message : String(error)}`,
         };
+      }
+    }
+
+    // Set reasoning effort if specified
+    if (targetEffort) {
+      try {
+        const effortResult = await setReasoningEffort(targetEffort);
+        if (!effortResult.success) {
+          console.error(`Warning: Failed to set reasoning effort to ${targetEffort}: ${effortResult.message}`);
+        }
+      } catch (error) {
+        console.error(`Warning: Exception setting reasoning effort:`, error);
       }
     }
 

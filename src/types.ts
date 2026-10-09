@@ -19,11 +19,21 @@ export interface SimpleResult {
   error?: string;
 }
 
+export type ReasoningEffort = 'instant' | 'medium' | 'high';
+
+export interface ReasoningResult {
+  success: boolean;
+  effort: ReasoningEffort | null;
+  message: string;
+  error?: string;
+}
+
 export type GenerationStatus = 'idle' | 'generating' | 'complete' | 'error';
 
 export interface SessionState {
   isLoggedIn: boolean;
   currentModel: string | null;
+  currentReasoningEffort: ReasoningEffort | null;
   conversationId: string | null;
   currentProjectUrl: string | null;
 }
@@ -112,6 +122,33 @@ export const SELECTORS = {
     'button[aria-label*="Attach"]',
     'button[aria-label*="Upload"]',
     'button[aria-label*="attach"]',
+  ],
+
+  // Reasoning effort / thinking selectors
+  reasoningTrigger: [
+    'button[aria-label*="思考量"]',
+    'button[aria-label*="推論"]',
+    'button[aria-label*="Reasoning"]',
+    'button[aria-label*="Thinking"]',
+    'button:has-text("思考量")',
+    'button:has-text("推論")',
+    'button:has-text("Reasoning")',
+    'button:has-text("Thinking")',
+    '[data-testid*="reasoning"]',
+    '[data-testid*="thinking"]',
+  ],
+
+  reasoningSlider: [
+    '[role="slider"]',
+    'input[type="range"]',
+    '[data-radix-collection-item][role="slider"]',
+  ],
+
+  reasoningPopover: [
+    '[data-radix-popper-content-wrapper]',
+    '[role="dialog"]',
+    '[role="tooltip"]',
+    'div[class*="popover"]',
   ],
 } as const;
 

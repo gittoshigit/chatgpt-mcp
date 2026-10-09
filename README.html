@@ -168,7 +168,7 @@ input[type="checkbox"] { margin-right: .45em; }
 </tr></thead><tbody>
 <tr>
 <td><code>chatgpt_ask</code></td>
-<td>Send prompt, optionally switch model/project, poll until complete, return response</td>
+<td>Send prompt, optionally switch model/project/reasoning_effort, poll until complete, return response</td>
 </tr>
 <tr>
 <td><code>chatgpt_reply</code></td>
@@ -185,6 +185,14 @@ input[type="checkbox"] { margin-right: .45em; }
 <tr>
 <td><code>chatgpt_new_chat</code></td>
 <td>Start fresh conversation (stays in project if set)</td>
+</tr>
+<tr>
+<td><code>chatgpt_get_reasoning_effort</code></td>
+<td>Read current reasoning effort (thinking depth: Instant / Medium / High) from UI</td>
+</tr>
+<tr>
+<td><code>chatgpt_set_reasoning_effort</code></td>
+<td>Set reasoning effort (&quot;instant&quot;, &quot;medium&quot;, or &quot;high&quot;) in ChatGPT web UI</td>
 </tr>
 </tbody></table>
 <p>All tools are <strong>blocking</strong> — they return only when the response is ready (or timeout). This matches the ergonomics of Codex and Gemini MCPs.</p>

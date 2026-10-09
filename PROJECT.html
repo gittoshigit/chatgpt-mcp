@@ -161,7 +161,7 @@ input[type="checkbox"] { margin-right: .45em; }
 <ul>
 <li>Chromiumプロファイル分離先: <code>C:\Users\&lt;User&gt;\.chatgpt-mcp-homes\&lt;ai&gt;</code>
 </li>
-<li>提供Tool: <code>chatgpt_ask</code>, <code>chatgpt_reply</code>, <code>chatgpt_upload</code>, <code>chatgpt_select_project</code>, <code>chatgpt_new_chat</code>
+<li>提供Tool: <code>chatgpt_ask</code>, <code>chatgpt_reply</code>, <code>chatgpt_upload</code>, <code>chatgpt_select_project</code>, <code>chatgpt_new_chat</code>, <code>chatgpt_get_reasoning_effort</code>, <code>chatgpt_set_reasoning_effort</code>
 </li>
 </ul>
 </li>
@@ -177,6 +177,8 @@ input[type="checkbox"] { margin-right: .45em; }
 <li>2026-10-02: Playwright付属ChromeでCloudflare Turnstile（「私はロボットではありません」）がループする現象に対し、過去の知見（REPOSITORY_LESSONS.md mem_20e76a8f33c146238402219119b40ea9）に基づき <code>channel: &#x27;chrome&#x27;</code> で実機Google Chromeを使用し、Mac UserAgentの偽装を撤廃。また回答完了検知で特定のTailwindクラス名依存が壊れていたのを <code>button[aria-label=&quot;コピーする&quot;]</code> の直接検出と <code>isStreaming</code> ガードに改修。日本語UIのホーム画面入力欄（<code>#pending-home-input</code>）、送信ボタン（<code>aria-label=&quot;送信&quot;</code>）、プロフィール検出に対応。Antigravityからの <code>chatgpt_ask</code> で5秒での回答取得成功を確認。
 </li>
 <li>2026-10-03: <code>start_orchestrator.bat</code> からのChatGPT MCP相談時に終了検知ができない問題を解消。リポジトリ側で <code>dist/</code> が未ビルドのまま（古いTailwindクラス名依存）だった状態を解消。さらに最新回答のコピーボタン検出（<code>modernHasCopy</code>）において、先行する過去回答のコピーボタンを誤検知せず、Tailwindクラス名変化にも耐性を持つよう、祖先コンテナ探索およびDOMノード順（<code>latestModernRoot.compareDocumentPosition</code>）による検出へ改修し、単体テストを追加。
+</li>
+<li>2026-10-10: ChatGPT Web UIの「思考量（Instant / Medium / High）」切り替え新UIに対応。入力欄右下の「思考量 ∨」トリガーの検出、ARIA sliderおよびポップアップ操作による段階設定（Home/ArrowRightキーおよびマウスクリックフォールバック）、検証処理を実装。<code>chatgpt_ask</code> に <code>reasoning_effort</code> 引数を追加し、<code>model</code> への指定に対する後方互換も実装。<code>chatgpt_get_reasoning_effort</code> と <code>chatgpt_set_reasoning_effort</code> ツールを新設。
 </li>
 </ul>
 </article></main>

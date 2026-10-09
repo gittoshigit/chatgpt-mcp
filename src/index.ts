@@ -16,6 +16,8 @@ import {
   uploadFiles,
   selectProject,
   newConversation,
+  getReasoningEffort,
+  setReasoningEffort,
 } from './chatgpt.js';
 import { closeBrowser } from './browser.js';
 
@@ -35,7 +37,7 @@ server.registerTool(
 
 Handles the full request/response cycle:
 1. Auto-starts browser session on first call
-2. Optionally switches project and model
+2. Optionally switches project, model, and reasoning effort (Instant/Medium/High)
 3. Sends prompt and polls with Fibonacci backoff
 4. Returns complete response (supports GPT-5.2 Pro 20+ min thinking)
 
@@ -43,6 +45,7 @@ Returns: { response, elapsed_seconds, model, chat_id, poll_count }`,
     inputSchema: z.object({
       prompt: z.string().min(1).describe('The prompt to send to ChatGPT'),
       model: z.string().optional().describe('Model/mode to select (e.g. "Pro", "Thinking", "Instant")'),
+      reasoning_effort: z.enum(['instant', 'medium', 'high']).optional().describe('Reasoning effort / thinking depth ("instant", "medium", or "high")'),
       project: z.string().optional().describe('Project name to switch to before sending'),
       timeout_minutes: z.number().min(1).max(120).default(60).describe('Max wait time in minutes (default: 60)'),
     }),
@@ -53,8 +56,8 @@ Returns: { response, elapsed_seconds, model, chat_id, poll_count }`,
       openWorldHint: true,
     },
   },
-  async ({ prompt, model, project, timeout_minutes }) => {
-    const result = await blockingAsk(prompt, model, project, timeout_minutes);
+  async ({ prompt, model, reasoning_effort, project, timeout_minutes }) => {
+    const result = await blockingAsk(prompt, model, project, timeout_minutes, reasoning_effort);
     return {
       content: [{
         type: 'text' as const,
@@ -191,6 +194,68 @@ Returns: { success, message }`,
   },
   async () => {
     const result = await newConversation();
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify(result, null, 2),
+      }],
+    };
+  },
+);
+
+// =============================================================================
+// Tool: chatgpt_get_reasoning_effort
+// =============================================================================
+server.registerTool(
+  'chatgpt_get_reasoning_effort',
+  {
+    title: 'Get Reasoning Effort / Thinking Depth',
+    description: `Read current reasoning effort (thinking depth) setting from ChatGPT web UI.
+
+Returns: { success, effort: "instant" | "medium" | "high" | null, message }`,
+    inputSchema: z.object({}),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  async () => {
+    const result = await getReasoningEffort();
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify(result, null, 2),
+      }],
+    };
+  },
+);
+
+// =============================================================================
+// Tool: chatgpt_set_reasoning_effort
+// =============================================================================
+server.registerTool(
+  'chatgpt_set_reasoning_effort',
+  {
+    title: 'Set Reasoning Effort / Thinking Depth',
+    description: `Set reasoning effort (thinking depth) in the ChatGPT web UI ("instant", "medium", or "high").
+
+Opens the reasoning popup, sets the level, verifies, and closes the popup.
+
+Returns: { success, effort: "instant" | "medium" | "high" | null, message }`,
+    inputSchema: z.object({
+      effort: z.enum(['instant', 'medium', 'high']).describe('Target reasoning effort: "instant", "medium", or "high"'),
+    }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  async ({ effort }) => {
+    const result = await setReasoningEffort(effort);
     return {
       content: [{
         type: 'text' as const,

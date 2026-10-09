@@ -17,7 +17,7 @@
 3. `npm run build`
 4. 各AI（Codex, Claude Code, Antigravity）のMCP設定に登録して利用。
    - Chromiumプロファイル分離先: `C:\Users\<User>\.chatgpt-mcp-homes\<ai>`
-   - 提供Tool: `chatgpt_ask`, `chatgpt_reply`, `chatgpt_upload`, `chatgpt_select_project`, `chatgpt_new_chat`
+   - 提供Tool: `chatgpt_ask`, `chatgpt_reply`, `chatgpt_upload`, `chatgpt_select_project`, `chatgpt_new_chat`, `chatgpt_get_reasoning_effort`, `chatgpt_set_reasoning_effort`
 
 ## 応答取得の確認記録
 - 2026-09-27: 実際のChatGPT画面では旧来の `conversation-turn-*` と `data-message-author-role="assistant"` が見つからず、回答本文は `main [class*="MarkdownRoot"]` にあった。完了後のコピー操作は、その回答を含む要素内の `aria-label="コピーする"` のボタンで確認した。
@@ -25,4 +25,4 @@
 - Pythonサンプルは対話形式で、最初の入力に `chatgpt_ask` または `chatgpt_upload`、続く入力に `chatgpt_reply` を使い、同じ会話を続ける。`--image <パス>` を繰り返して複数ファイルを最初の質問へ添付できる。`--once` と最初の質問を指定すると従来の1回実行になる。現行ツール仕様では画像付き呼び出しに `--model` / `--project` を併用できない。
 - 2026-10-02: Playwright付属ChromeでCloudflare Turnstile（「私はロボットではありません」）がループする現象に対し、過去の知見（REPOSITORY_LESSONS.md mem_20e76a8f33c146238402219119b40ea9）に基づき `channel: 'chrome'` で実機Google Chromeを使用し、Mac UserAgentの偽装を撤廃。また回答完了検知で特定のTailwindクラス名依存が壊れていたのを `button[aria-label="コピーする"]` の直接検出と `isStreaming` ガードに改修。日本語UIのホーム画面入力欄（`#pending-home-input`）、送信ボタン（`aria-label="送信"`）、プロフィール検出に対応。Antigravityからの `chatgpt_ask` で5秒での回答取得成功を確認。
 - 2026-10-03: `start_orchestrator.bat` からのChatGPT MCP相談時に終了検知ができない問題を解消。リポジトリ側で `dist/` が未ビルドのまま（古いTailwindクラス名依存）だった状態を解消。さらに最新回答のコピーボタン検出（`modernHasCopy`）において、先行する過去回答のコピーボタンを誤検知せず、Tailwindクラス名変化にも耐性を持つよう、祖先コンテナ探索およびDOMノード順（`latestModernRoot.compareDocumentPosition`）による検出へ改修し、単体テストを追加。
-
+- 2026-10-10: ChatGPT Web UIの「思考量（Instant / Medium / High）」切り替え新UIに対応。入力欄右下の「思考量 ∨」トリガーの検出、ARIA sliderおよびポップアップ操作による段階設定（Home/ArrowRightキーおよびマウスクリックフォールバック）、検証処理を実装。`chatgpt_ask` に `reasoning_effort` 引数を追加し、`model` への指定に対する後方互換も実装。`chatgpt_get_reasoning_effort` と `chatgpt_set_reasoning_effort` ツールを新設。
